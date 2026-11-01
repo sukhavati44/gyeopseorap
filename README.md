@@ -2,13 +2,13 @@
 
 **수행평가 다층 작업기억 관리 프로그램**
 
-평가 자료와 점수, 관찰 기록을 여러 단계의 작업표로 정리하기 위해 만든 교사용 Windows 로컬 프로그램입니다. 직접 사용하며 개선하고 있는 **초기 시험 버전**입니다. 완성된 서비스나 학교 행정 시스템을 목표로 소개하는 단계는 아닙니다.
+평가 자료와 점수, 관찰 기록을 여러 단계의 작업표로 정리하기 위해 만든 교사용 Windows 로컬 프로그램입니다. 직접 사용하며 개선하고 있는 **초기 시험 버전**입니다.
 
 <img src="src/assets/gyeopseorap-open.png" alt="겹서랍 열린 서랍 아이콘" width="128">
 
 ## 실행 파일 받기
 
-[Releases](https://github.com/sukhavati44/gyeopseorap/releases)에서 **v0.0.1-beta**의 Windows ZIP을 내려받으세요. 압축을 완전히 푼 뒤 `겹서랍/START.exe`를 실행합니다. 실행파일만 옮기지 말고 옆의 소스·아이콘 파일도 함께 보관해 주세요. 현재는 단일 EXE 패키지가 아닙니다.
+실행용 ZIP은 빌드·검증을 마쳤으며 GitHub 릴리스 등록을 준비 중입니다. 등록 후 [Releases](https://github.com/sukhavati44/gyeopseorap/releases)에서 **v0.0.1-beta**의 Windows ZIP을 내려받을 수 있습니다. 압축을 완전히 푼 뒤 `겹서랍/START.exe`를 실행합니다. 실행파일만 옮기지 말고 옆의 소스·아이콘 파일도 함께 보관해 주세요. 현재는 단일 EXE 패키지가 아닙니다.
 
 ## 실행 환경
 
@@ -56,7 +56,7 @@
 Windows PowerShell 5.1에서 저장소 폴더를 열고 실행합니다.
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .uild.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./build.ps1
 ```
 
 결과는 `dist/겹서랍/START.exe`입니다. `dist/겹서랍` 폴더 전체를 함께 사용하세요. 별도 패키지 다운로드나 학생 자료가 빌드에 필요하지 않습니다.

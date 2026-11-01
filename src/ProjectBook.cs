@@ -1,0 +1,18 @@
+using System;using System.IO;using System.IO.Compression;using System.Xml;using System.Text;using System.Collections;using System.Collections.Generic;
+public static class ProjectBook {
+ static string Esc(string s){return System.Security.SecurityElement.Escape(s)??"";}
+ static string Col(int n){string s="";while(n>0){n--;s=(char)('A'+n%26)+s;n/=26;}return s;}
+ static string Cell(int row,int col,string v){return "<c r=\""+Col(col)+row+"\" t=\"inlineStr\"><is><t xml:space=\"preserve\">"+Esc(v)+"</t></is></c>";}
+ static void Part(ZipArchive z,string name,string xml){using(var w=new StreamWriter(z.CreateEntry(name).Open(),new UTF8Encoding(false)))w.Write(xml);}
+ public static void Create(string path,string layer,string[] fields,Hashtable students){
+  var ids=new List<string>();foreach(object k in students.Keys)ids.Add((string)k);ids.Sort(StringComparer.Ordinal);
+  var data=new StringBuilder("<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData><row r=\"1\">");var headers=new List<string>{"student_id","virtual_name","code"};headers.AddRange(fields);for(int i=0;i<headers.Count;i++)data.Append(Cell(1,i+1,headers[i]));data.Append("</row>");int row=2;foreach(string id in ids){var s=(Hashtable)students[id];data.Append("<row r=\""+row+"\">");data.Append(Cell(row,1,id)).Append(Cell(row,2,(string)s["name"])).Append(Cell(row,3,(string)s["code"])).Append("</row>");row++;}data.Append("</sheetData></worksheet>");
+  using(var fs=new FileStream(path,FileMode.CreateNew))using(var z=new ZipArchive(fs,ZipArchiveMode.Create)){
+   Part(z,"[Content_Types].xml","<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Default Extension=\"xml\" ContentType=\"application/xml\"/><Override PartName=\"/xl/workbook.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml\"/><Override PartName=\"/xl/worksheets/sheet1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/><Override PartName=\"/xl/worksheets/sheet2.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/></Types>");
+   Part(z,"_rels/.rels","<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"xl/workbook.xml\"/></Relationships>");
+   Part(z,"xl/workbook.xml","<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><sheets><sheet name=\"Data\" sheetId=\"1\" r:id=\"rId1\"/><sheet name=\"_identity\" sheetId=\"2\" state=\"veryHidden\" r:id=\"rId2\"/></sheets></workbook>");
+   Part(z,"xl/_rels/workbook.xml.rels","<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet1.xml\"/><Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet2.xml\"/></Relationships>");
+   Part(z,"xl/worksheets/sheet1.xml",data.ToString());Part(z,"xl/worksheets/sheet2.xml","<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData><row r=\"1\">"+Cell(1,1,"layer_id")+Cell(1,2,layer)+"</row></sheetData></worksheet>");
+  }
+ }
+}

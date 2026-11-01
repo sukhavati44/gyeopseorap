@@ -1,0 +1,20 @@
+# Local data and build artifacts
+/dist/
+/evidence/
+/src/evidence/
+/src/projects/
+/src/recent-projects.json
+/src/recent-workspace.json
+*.zip
+*.exe
+*.xlsx
+*.xls
+*.csv
+*.pdf
+*.lnk
+*.log
+*.tmp
+*.lock
+.env
+.env.*
+__pycache__/
