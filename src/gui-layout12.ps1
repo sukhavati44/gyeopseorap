@@ -6,9 +6,9 @@ $uiStatus=New-Object Windows.Forms.Panel;$dashboard.Controls.Add($uiStatus);$das
 $uiLegends=@($dashboard.Controls|Where-Object {$_ -is [Windows.Forms.Label] -and $_.Text -in @('상위 값과 다름','하위 값과 다름','상·하위 모두 다름')});foreach($legend in $uiLegends){$legend.Parent=$uiStatus}
 $uiLegendChips=@();$uiLegendFont=New-Object Drawing.Font('맑은 고딕',8.5)
 foreach($legend in $uiLegends){$chip=New-Object Windows.Forms.Label;$chip.BackColor=$legend.BackColor;$uiStatus.Controls.Add($chip);$uiLegendChips+=,$chip;$legend.BackColor=[Drawing.Color]::Transparent;$legend.ForeColor=$navy;$legend.Font=$uiLegendFont;$legend.TextAlign='MiddleLeft'}
-$uiDetail=DButton $dashboard '상태 상세' 0 0 80 {[Windows.Forms.MessageBox]::Show($f,$dashMessage.Text,'작업 상태 상세','OK','Information')|Out-Null};$uiDetail.Height=26
+$uiDetail=DButton $dashboard '상세' 0 0 46 {[Windows.Forms.MessageBox]::Show($f,$dashMessage.Text,'작업 상태 상세','OK','Information')|Out-Null};$uiDetail.Height=26
 $uiStatus.BorderStyle='FixedSingle';$uiStatus.BackColor=[Drawing.Color]::FromArgb(247,249,252)
-$uiStatusTitle=Label $uiStatus '상태' 10 6 42 24;$uiStatusTitle.Font=New-Object Drawing.Font('맑은 고딕',9.5,[Drawing.FontStyle]::Bold)
+# Reuse the existing detail action as the compact left-hand status box.
 $dashMessage.Parent=$uiStatus;$uiDetail.Parent=$uiStatus;$dashSelected.BackColor=[Drawing.Color]::Transparent;$dashMessage.BackColor=[Drawing.Color]::Transparent
 $uiDivider=New-Object Windows.Forms.Panel;$uiDivider.BackColor=$pale;$uiDivider.Width=5;$uiDivider.Cursor=[Windows.Forms.Cursors]::SizeWE;$dashboard.Controls.Add($uiDivider)
 $script:uiDragging=$false;$uiDivider.Add_MouseDown({$script:uiDragging=$true;$uiDivider.Capture=$true});$uiDivider.Add_MouseUp({$script:uiDragging=$false;$uiDivider.Capture=$false});$uiDivider.Add_MouseMove({param($sender,$e)if($uiDragging){$script:uiTreeWidth=[math]::Max(165,[math]::Min(285,$uiTreeWidth+$e.X-2));DLayout}})
@@ -30,9 +30,9 @@ function DLayout {
   $dashHeading.SetBounds($left,(94+$headerOffset),$width,25);$dashHeading.Font=New-Object Drawing.Font('맑은 고딕',11,[Drawing.FontStyle]::Bold);$dashHeading.AutoEllipsis=$true;if($nActionTips){$nActionTips.SetToolTip($dashHeading,$dashHeading.Text);$nActionTips.SetToolTip($nProjectLabel,$nProjectLabel.Text)}
   $uiTools.SetBounds($left,(122+$headerOffset),$width,68);$uiTools.PerformLayout();$toolBottom=0;foreach($control in $uiTools.Controls){if($control.Visible){$toolBottom=[math]::Max($toolBottom,$control.Bottom)}};$toolHeight=[math]::Max(30,$toolBottom);$uiTools.Height=$toolHeight
   $gridTop=128+$headerOffset+$toolHeight;$dashGrid.SetBounds($left,$gridTop,$width,[math]::Max(260,$bottom-84-$gridTop));$dashGrid.ColumnHeadersHeight=48
-  $uiStatus.SetBounds($left,($dashGrid.Bottom-1),$width,84);$dashSelected.SetBounds(56,6,[math]::Max(120,$width-324),24)
-  $i=0;foreach($legend in $uiLegends){$legend.SetBounds(($width-136),(6+$i*22),128,20);$uiLegendChips[$i].SetBounds(($width-158),(10+$i*22),16,12);$i++}
-  $dashMessage.SetBounds(10,34,($width-180),42);$dashMessage.AutoEllipsis=$true;$uiDetail.SetBounds(($width-252),6,82,26);$dashCount.Visible=$false
+  $uiStatus.SetBounds($left,($dashGrid.Bottom-1),$width,84);$dashSelected.SetBounds(64,6,[math]::Max(120,$width-244),24)
+  $i=0;foreach($legend in $uiLegends){$legend.SetBounds(($width-136),(4+$i*19),128,18);$uiLegendChips[$i].SetBounds(($width-158),(7+$i*19),16,12);$i++}
+  $dashMessage.SetBounds(10,34,($width-180),42);$dashMessage.AutoEllipsis=$true;$uiDetail.SetBounds(10,6,46,24);$dashCount.Visible=$false
   $side.SetBounds(8,96,$uiTreeWidth,[math]::Max(400,$bottom-96));foreach($label in @($side.Controls|Where-Object {$_ -is [Windows.Forms.Label] -and $_.Visible})){$label.SetBounds(0,0,$uiTreeWidth,24)}
   $buttons=@($side.Controls|Where-Object {$_ -is [Windows.Forms.Button] -and $_.Visible}|Sort-Object Top);$treeHeight=[math]::Max(180,$side.Height-28-$buttons.Count*34);$wTree.SetBounds(0,26,$uiTreeWidth,$treeHeight);$j=0;foreach($button in $buttons){$button.SetBounds(0,(32+$treeHeight+$j*34),$uiTreeWidth,28);$j++}
   $uiDivider.SetBounds(($left-10),96,5,$side.Height)

@@ -1,5 +1,5 @@
 ﻿param(
- [ValidateSet('cleanupscan','cleanupcommit','projectarchive','neispreview','neisimport','neisexport','projectcreate','projectinspect','projectbackup','projectrestore','init','create','register','scan','link','sync','open','query','status','rename','student','row','relocate','recover','preview','commit','additem','importpreview','importcommit','withdraw','membership','importrecover','stagingpreview','stagingcommit','courseconfigure','tablesnapshot','gridcommit','tableexport','tablepreview','tablecommit','coursework','spacecolumntype','spacecolumn','spacecreate','spacerename','parentpreview','parentcommit','studentview','trashpreview','trashcommit','trashlist','trashread')][string]$Action='status',
+ [ValidateSet('studentexport','cleanupscan','cleanupcommit','projectarchive','neispreview','neisimport','neisexport','projectcreate','projectinspect','projectbackup','projectrestore','init','create','register','scan','link','sync','open','query','status','rename','student','row','relocate','recover','preview','commit','additem','importpreview','importcommit','withdraw','membership','importrecover','stagingpreview','stagingcommit','courseconfigure','tablesnapshot','gridcommit','tableexport','tablepreview','tablecommit','coursework','spacecolumntype','spacecolumn','spacecreate','spacerename','parentpreview','parentcommit','studentview','trashpreview','trashcommit','trashlist','trashread')][string]$Action='status',
  [string]$Layer='L1',[string]$Parent='', [string]$File='', [string]$Item='A.score',
  [string]$Source='', [string]$SourceItem='', [string]$Target='', [string]$TargetItem='',
  [string]$Class='', [string]$Area='', [string]$Student='', [string]$AsOf='2026-10-31',
@@ -21,6 +21,8 @@ function To-Map($o){
  if($o -is [array]){return ,@($o|ForEach-Object {To-Map $_})};return $o
 }
 function Load-Meta { $script:M=To-Map (Get-Content -Raw -Encoding utf8 -LiteralPath $MetaPath | ConvertFrom-Json) }
+if($Action -eq 'studentexport'){. (Join-Path $PSScriptRoot 'student-export.ps1');$req=To-Map (Get-Content -LiteralPath $PayloadFile -Raw -Encoding UTF8|ConvertFrom-Json);ExportStudents $Root $req | ConvertTo-Json -Depth 12;exit}
+
 function Same-Value($a,$b){
  if($null -eq $a -or $null -eq $b){return ($null -eq $a -and $null -eq $b)}
  if($a -is [ValueType] -and $b -is [ValueType]){return ([decimal]$a -eq [decimal]$b)}

@@ -33,9 +33,9 @@ function Ui12Style($control){
 Ui12Style $f
 $script:uiStatusStrongFont=New-Object Drawing.Font('맑은 고딕',10,[Drawing.FontStyle]::Bold)
 function Ui12StatusMessageStyle{
- $important=$dashMessage.Text -match '연결된 열:|하위값 반영:|저장|반영했습니다|반영을 취소|완료|오류|실패|처리 중'
+ $important=$dashMessage.Text -match '배점 조합으로|연결된 열:|하위값 반영:|저장|반영했습니다|반영을 취소|완료|오류|실패|처리 중'
  $dashMessage.Font=if($important){$uiStatusStrongFont}else{$uiFontRegular}
- $dashMessage.ForeColor=Ui12Color $(if($important){'#1A365D'}else{'#4A5568'})
+ $dashMessage.ForeColor=Ui12Color $(if($dashMessage.Text -like '배점 조합으로*'){'#AE2630'}elseif($important){'#1A365D'}else{'#4A5568'})
 }
 $dashMessage.Add_TextChanged({Ui12StatusMessageStyle});Ui12StatusMessageStyle
 $uiStatus.Add_Paint({param($sender,$e)$pen=New-Object Drawing.Pen((Ui12Color '#CBD5E0'),1);try{$e.Graphics.DrawLine($pen,0,0,$sender.Width,0)}finally{$pen.Dispose()}})

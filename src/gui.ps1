@@ -93,4 +93,6 @@ function Open-Workspace($path){
 . (Join-Path $base 'gui-code-management.ps1')
 . (Join-Path $base 'gui-import-mapping.ps1')
 . (Join-Path $base 'gui-branding.ps1')
+. (Join-Path $base 'gui-score-notes.ps1')
+. (Join-Path $base 'gui-student-export.ps1')
 [IO.File]::WriteAllText((Join-Path $base 'evidence/startup-diagnostic.json'),(@{tabs=@($tabs.TabPages|ForEach-Object {$_.Text});errors=@($Error|ForEach-Object {$_.ToString()});root=$base}|ConvertTo-Json -Depth 5));[void]$f.ShowDialog()

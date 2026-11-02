@@ -1,7 +1,7 @@
 ﻿$script:nView='project';$script:nLastArea='';$script:nLastSpace='';$script:nTabLoading=$false
 $f.Text=$productTitle;$f.MinimumSize=New-Object Drawing.Size(1300,940)
 $nBar=New-Object Windows.Forms.FlowLayoutPanel;$nBar.Dock='Bottom';$nBar.Height=52;$nBar.BackColor=$pale;$nBar.WrapContents=$false;$f.Controls.Add($nBar)
-$nTabs=@{};foreach($spec in @(@('project','프로젝트'),@('summary','종합표'),@('detail','영역 세부'),@('workspace','작업공간'),@('student','학생기록'),@('import','반입 검토'),@('help','오류·복구 안내'))){$b=DButton $nBar $spec[1] 0 0 175 {DSafe {NSelect ([string]$this.Tag)}};$b.Tag=$spec[0];$b.Height=44;$b.Margin=New-Object Windows.Forms.Padding(3,4,3,4);$nTabs[$spec[0]]=$b}
+$nTabs=@{};foreach($spec in @(@('project','프로젝트'),@('summary','종합표'),@('detail','영역 세부'),@('workspace','작업공간'),@('student','학생 개별조회'),@('import','반입 검토'),@('help','오류·복구 안내'))){$b=DButton $nBar $spec[1] 0 0 175 {DSafe {NSelect ([string]$this.Tag)}};$b.Tag=$spec[0];$b.Height=44;$b.Margin=New-Object Windows.Forms.Padding(3,4,3,4);$nTabs[$spec[0]]=$b}
 $nHome=New-Object Windows.Forms.Panel;$nHome.Dock='Fill';$nHome.BackColor=[Drawing.Color]::White;$f.Controls.Add($nHome)
 $nHomeTitle=Label $nHome $productTitle 35 30 900 50;$nHomeTitle.Font=New-Object Drawing.Font('맑은 고딕',22,[Drawing.FontStyle]::Bold);$nHomeTitle.ForeColor=$navy
 $nHomeDescription=Label $nHome $productDescription 300 22 700 26;$nHomeDescription.ForeColor=$navy

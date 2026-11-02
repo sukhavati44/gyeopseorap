@@ -21,7 +21,7 @@ $wNew=DButton $side '하위 공간 만들기' 8 420 174 {DSafe {WNewSpace}}
 $wRename=DButton $side '이름 바꾸기' 8 462 174 {DSafe {DClean;if($dashMode -ne 'workspace'){throw '이름을 바꿀 하위 작업공간을 선택하세요.'};$label=Input-Name '작업공간 이름' '표시명만 변경합니다. 학생 ID·자료 연결은 유지됩니다.' (LName $dashLayer);if(!$label){return};Run 'spacerename' (DArgs @{PayloadFile=(Write-Request @{label=$label})})|Out-Null;Read-Meta;DLoad 'workspace' $dashArea}}
 $wImport=DButton $side '자료 가져오기' 8 514 174 {DSafe {WImportDialog}}
 $wReflect=DButton $side '상위에 반영' 8 556 174 {DSafe {WParentDialog}}
-$wRecords=DButton $side '학생기록' 8 608 174 {DSafe {WStudentDialog}}
+$wRecords=DButton $side '기록 내보내기' 8 608 174 {DSafe {StudentExportDialog}}
 
 $wModeButton=DButton $dashboard '이름  ›' 450 12 260 {DSafe {$script:wIdentityMode=($wIdentityMode+1)%3;WIdentityApply;DSelection}}
 $dashTitle.Width=400;$wModeButton.BringToFront()
@@ -125,9 +125,9 @@ function WParentDialog{
 }
 function WStudentDialog{
  DClean;$sid=if($wStudent){$wStudent}elseif($dashGrid.CurrentRow){[string]$dashGrid.CurrentRow.Tag}else{''};if(!$sid){throw '현재 표에서 학생을 선택하세요.'}
- $d=New-Object Windows.Forms.Form;$d.Text='선택 학생 · 필요한 깊이만 조회';$d.Size=New-Object Drawing.Size(1050,650);$d.StartPosition='CenterParent';[void](Label $d ((WStudentLabel $sid)+' / '+(WPath $dashLayer)) 15 15 990 40)
- $depth=Combo $d 15 65 400;Choice $depth 0 '현재 작업표만';Choice $depth 1 '현재와 바로 아래 작업표';Choice $depth 2 '현재에서 두 단계 아래까지';$depth.SelectedIndex=0;$g=Grid $d 15 120 990 420 @('작업공간','항목','값')
- DButton $d '선택 깊이 조회' 440 63 240 {DSafe {$r=(Run 'studentview' (DArgs @{Student=$sid;PayloadFile=(Write-Request @{depth=[int]$depth.SelectedItem.Id})}))|ConvertFrom-Json;$g.Rows.Clear();foreach($x in $r.records){[void]$g.Rows.Add([object[]]@($x.workspace,$x.label,(ValueText $x.value)))}}}|Out-Null;[void]$(Ui12Dialog $d;$d.ShowDialog($f))
+ $viewItem=if($dashGrid.CurrentCell){[string]$dashGrid.CurrentCell.OwningColumn.Tag.item}else{''};$d=New-Object Windows.Forms.Form;$d.Text='선택 학생 · 필요한 깊이만 조회';$d.Size=New-Object Drawing.Size(1050,650);$d.StartPosition='CenterParent';[void](Label $d ((WStudentLabel $sid)+' / '+(WPath $dashLayer)) 15 15 990 40)
+ $depth=Combo $d 15 65 400;Choice $depth 0 '현재 작업표만';Choice $depth 1 '현재와 바로 아래 작업표';Choice $depth 2 '현재에서 두 단계 아래까지';Choice $depth 3 '현재에서 세 단계 아래까지';$depth.SelectedIndex=0;$g=Grid $d 15 120 990 420 @('작업공간','항목','값')
+ DButton $d '선택 깊이 조회' 440 63 240 {DSafe {$r=(Run 'studentview' (DArgs @{Student=$sid;PayloadFile=(Write-Request @{depth=[int]$depth.SelectedItem.Id;item=$viewItem})}))|ConvertFrom-Json;$g.Rows.Clear();foreach($x in $r.records){[void]$g.Rows.Add([object[]]@($x.workspace,$x.label,(ValueText $x.value)))}}}|Out-Null;[void]$(Ui12Dialog $d;$d.ShowDialog($f))
 }
 
 function WImportDialog{

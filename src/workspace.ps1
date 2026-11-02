@@ -63,10 +63,23 @@ function WParentCommit($request=@{}){
  try{Excel;try{return Apply-Plan $plan}finally{Close-Excel}}finally{$script:PreviewFingerprint=$save}
 }
 function WStudentView($req){
- if(!$Student -or !$M.students.ContainsKey($Student) -or $req.depth -notin @(0,1,2)){throw '학생과 조회 깊이(0~2)를 선택하세요.'}
- $p=CProfile;[void](WFields $p);$start=$Layer;$ids=@($start);$front=@($start)
- for($d=0;$d -lt [int]$req.depth;$d++){$next=@($M.layers.Keys|Where-Object {$M.layers[$_].parent -in $front});$ids+= $next;$front=$next}
- $records=[Collections.Generic.List[object]]::new();foreach($id in $ids){$script:Layer=$id;try{[void](WFields $p);$q=CSnapshot;foreach($r in $q.data){$r.workspace=(Layer-Info $id).name;$r.layer=$id;$records.Add($r)}}catch{if($id -eq $start){throw}}};$script:Layer=$start
+ if(!$Student -or !$M.students.ContainsKey($Student) -or $req.depth -notin @(0,1,2,3)){throw '학생과 조회 깊이(0~3)를 선택하세요.'}
+ $selectedItem=[string]$req['item'];$p=CProfile;[void](WFields $p);$start=$Layer;$savedArea=$Area;$ids=@($start);$front=@($start)
+ for($d=0;$d -lt [int]$req.depth;$d++){
+  $next=@($M.layers.Keys|Where-Object {$M.layers[$_].parent -in $front})
+  if($d -eq 0 -and $selectedItem){$next=@($next|Where-Object {$M.workspaceScopes[$_].parent_item -eq $selectedItem -or $_ -in @($p.areas|Where-Object root_item -EQ $selectedItem|ForEach-Object {$_.work_layer})})}
+  $ids+=$next;$front=$next
+ }
+ $records=[Collections.Generic.List[object]]::new()
+ try{foreach($id in $ids){
+  $script:Layer=$id;$script:Area=$savedArea
+  if($id -ne $p.root){
+   if($M.workspaceScopes[$id].area){$script:Area=[string]$M.workspaceScopes[$id].area}
+   else{$cursor=$id;$seen=@{};while($cursor -and !$seen[$cursor]){$seen[$cursor]=$true;$match=@($p.areas|Where-Object work_layer -EQ $cursor);if($match.Count){$script:Area=[string]$match[0].root_item;break};$cursor=$M.layers[$cursor].parent}}
+  }
+  [void](WFields $p);$q=CSnapshot
+  foreach($r in $q.data){if($id -eq $start -and $selectedItem -and $r.item -ne $selectedItem){continue};$r.workspace=(Layer-Info $id).name;$r.layer=$id;$records.Add($r)}
+ }}finally{$script:Layer=$start;$script:Area=$savedArea}
  return @{records=$records.ToArray();depth=[int]$req.depth;workspace_count=$ids.Count;student=$Student;global_search=$false}
 }
 
