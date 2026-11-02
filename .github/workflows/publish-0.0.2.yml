@@ -1,4 +1,4 @@
-name: Publish verified 0.0.2 Beta ZIP
+name: Refresh verified 0.0.2 Beta ZIP
 on:
   push:
     branches: [main]
@@ -16,58 +16,59 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Verify original ZIP and publish prerelease
+      - name: Replace approved 0.0.2 asset and align source tag
         shell: python
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           import os, json, base64, hashlib, urllib.request, urllib.error, urllib.parse
-          repo = os.environ['GITHUB_REPOSITORY']
-          api = 'https://api.github.com/repos/' + repo
+          api = 'https://api.github.com/repos/' + os.environ['GITHUB_REPOSITORY']
           token = os.environ['GH_TOKEN']
-          expected = '8f13b9026b460b463a962baa4276791e825677486e878c0baf1911a4c5af535b'
+          expected = '74ee6be4af51cfa6faeefb29ba9b076c05600d020fe95beb6d44a61fc5de5f40'
+          source = 'c2e72da0573a6fcf62de41547c868e40c8a8b155'
           tag = 'v0.0.2-beta'
-          source_commit = '954476768fe564347d4239026c1b332f64c9cb21'
           filename = 'gyeopseorap-0.0.2-beta-windows-x64.zip'
           def request(url, method='GET', data=None, mime='application/json'):
               if isinstance(data, dict): data = json.dumps(data, ensure_ascii=False).encode('utf-8')
-              headers = {'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github+json',
-                         'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'gyeopseorap-release', 'Content-Type': mime}
+              headers = {'Authorization':'Bearer '+token, 'Accept':'application/vnd.github+json', 'User-Agent':'gyeopseorap-release', 'Content-Type':mime}
               with urllib.request.urlopen(urllib.request.Request(url, data=data, headers=headers, method=method), timeout=120) as response:
-                  return json.load(response)
-          blob = request(api + '/git/blobs/aa5776a171c9f6e4baa3d3a031e6cb0ac516fcdc')
-          payload = base64.b64decode(blob['content'])
-          assert len(payload) == 1095475 and hashlib.sha256(payload).hexdigest() == expected, 'Artifact checksum mismatch'
-          try:
-              release = request(api + '/releases/tags/' + tag)
-          except urllib.error.HTTPError as error:
-              if error.code != 404: raise
-              notes = '\n'.join([
-                  '겹서랍의 두 번째 공개 시험 버전입니다.',
-                  '수행평가 자료와 점수·관찰 기록을 다층 작업표로 관리하는 Windows 로컬 프로그램입니다.',
-                  '', '- 선택형 열 배점 메모와 가능한 점수 조합 대조 안내',
-                  '- 학생 개별조회: 선택 항목 기준 하위 3층까지 조회',
-                  '- 기록 내보내기: 학생별 전체 자료·메모·이력·연결을 독립 XLSX로 출력',
-                  '- 1인/학급 단위, 이름/둘 다/코드 선택 지원',
-                  '- 배점 불일치 글씨와 상태 영역 표시 개선',
-                  '', 'Windows 64비트와 데스크톱 Microsoft Excel이 필요합니다.',
-                  'ZIP을 완전히 풀고 겹서랍 폴더의 START.exe를 실행하세요. 프로젝트 자료는 별도 보관합니다.',
-                  '기존 프로젝트는 먼저 백업하고 사본으로 시험하세요.',
-                  '코드만 출력해도 원문 내용·메모에 포함된 실명은 자동으로 지우지 않습니다.',
-                  '', 'SHA-256: ' + expected])
-              release = request(api + '/releases', 'POST', {'tag_name': tag, 'target_commitish': source_commit,
-                  'name': '겹서랍 Beta 0.0.2', 'body': notes, 'draft': True, 'prerelease': True, 'make_latest': 'false'})
-          assert release['tag_name'] == tag and release['prerelease'], 'Unexpected existing release'
-          existing = [a for a in release['assets'] if a['name'] == filename]
-          if existing:
-              assert len(existing) == 1 and existing[0]['size'] == len(payload) and existing[0].get('digest') == 'sha256:' + expected, 'Existing asset differs; not overwritten'
-              asset = existing[0]
+                  raw = response.read()
+                  return json.loads(raw) if raw else None
+          payload = base64.b64decode(request(api+'/git/blobs/dca7ebca587d13e06af11cd24a43f6449cde9c21')['content'])
+          assert len(payload)==1096719 and hashlib.sha256(payload).hexdigest()==expected
+          release = request(api+'/releases/tags/'+tag)
+          assert release['id']==431322614 and not release['immutable'] and release['prerelease']
+          current = [a for a in release['assets'] if a['name']==filename]
+          assert len(current)==1
+          old = current[0]
+          if old.get('digest') != 'sha256:'+expected:
+              assert old['id']==701351843 and old.get('digest')=='sha256:8f13b9026b460b463a962baa4276791e825677486e878c0baf1911a4c5af535b', 'Release changed unexpectedly'
+              upload = release['upload_url'].split('{')[0]+'?'+urllib.parse.urlencode({'name':filename+'.replacement'})
+              new = request(upload, 'POST', payload, 'application/zip')
+              assert new['state']=='uploaded' and new['size']==len(payload) and new.get('digest')=='sha256:'+expected
+              request(api+'/releases/assets/'+str(old['id']), 'PATCH', {'name':filename+'.previous'})
+              try:
+                  asset = request(api+'/releases/assets/'+str(new['id']), 'PATCH', {'name':filename})
+              except Exception:
+                  request(api+'/releases/assets/'+str(old['id']), 'PATCH', {'name':filename})
+                  raise
           else:
-              upload = release['upload_url'].split('{')[0] + '?' + urllib.parse.urlencode({'name': filename})
-              asset = request(upload, 'POST', payload, 'application/zip')
-          assert asset['state'] == 'uploaded' and asset['size'] == len(payload), 'Upload incomplete'
-          assert asset.get('digest') in (None, 'sha256:' + expected), 'Uploaded asset digest differs'
-          if release['draft']:
-              release = request(api + '/releases/' + str(release['id']), 'PATCH', {'draft': False, 'prerelease': True, 'make_latest': 'false'})
-          print('Published:', release['html_url'])
-          print('Asset:', asset['name'], asset['size'], 'bytes; SHA-256 verified')
+              asset = old
+          request(api+'/git/refs/tags/'+tag, 'PATCH', {'sha':source,'force':True})
+          notes = '\n'.join([
+              '겹서랍 Beta 0.0.2 수정 배포 (2026-11-02)',
+              '', '- 프로젝트 이름의 폴더를 선택하여 불러오기 · 파일 선택창 오류 수정',
+              '- 학생별 XLSX: 작업표·항목·점수·내용 옆에 메모·배점 표시',
+              '- 학급 표시 및 이름/둘 다/코드 출력 지원',
+              '- 코드 옵션에서는 파일명과 학생정보의 이름·번호 제외',
+              '- 배점 대조와 하위 3층 간편 조회 기능 유지',
+              '', 'Windows 64비트와 데스크톱 Microsoft Excel이 필요합니다.',
+              'ZIP 전체를 풀고 겹서랍/START.exe를 실행하세요. 프로젝트는 별도 보관합니다.',
+              '코드만 출력해도 원문·메모에 포함된 실명까지 자동으로 지우지는 않습니다.',
+              '', 'SHA-256: '+expected])
+          request(api+'/releases/'+str(release['id']), 'PATCH', {'body':notes,'target_commitish':source,'prerelease':True})
+          if old['id'] != asset['id']:
+              request(api+'/releases/assets/'+str(old['id']), 'DELETE')
+          final = request(api+'/releases/tags/'+tag)
+          assert len(final['assets'])==1 and final['assets'][0]['digest']=='sha256:'+expected
+          print('Updated:', final['html_url'], expected)
