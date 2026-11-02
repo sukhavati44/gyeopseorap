@@ -54,7 +54,12 @@ jobs:
                   raise
           else:
               asset = old
-          request(api+'/git/refs/tags/'+tag, 'PATCH', {'sha':source,'force':True})
+          source = os.environ['GITHUB_SHA']
+          try:
+              request(api+'/git/refs/tags/'+tag, 'PATCH', {'sha':source,'force':True})
+          except urllib.error.HTTPError as error:
+              print('Tag update error:', error.code, error.read().decode())
+              raise
           notes = '\n'.join([
               '겹서랍 Beta 0.0.2 수정 배포 (2026-11-02)',
               '', '- 프로젝트 이름의 폴더를 선택하여 불러오기 · 파일 선택창 오류 수정',
@@ -67,8 +72,9 @@ jobs:
               '코드만 출력해도 원문·메모에 포함된 실명까지 자동으로 지우지는 않습니다.',
               '', 'SHA-256: '+expected])
           request(api+'/releases/'+str(release['id']), 'PATCH', {'body':notes,'target_commitish':source,'prerelease':True})
-          if old['id'] != asset['id']:
-              request(api+'/releases/assets/'+str(old['id']), 'DELETE')
+          for previous in request(api+'/releases/'+str(release['id'])+'/assets'):
+              if previous['id']==701351843 and previous['name']==filename+'.previous':
+                  request(api+'/releases/assets/'+str(previous['id']), 'DELETE')
           final = request(api+'/releases/tags/'+tag)
           assert len(final['assets'])==1 and final['assets'][0]['digest']=='sha256:'+expected
           print('Updated:', final['html_url'], expected)
