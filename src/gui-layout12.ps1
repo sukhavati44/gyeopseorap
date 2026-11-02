@@ -1,4 +1,4 @@
-﻿# TRACKA-R1: geometry only. No data or engine changes.
+# TRACKA-R1: geometry only. No data or engine changes.
 $script:uiTreeWidth=220;$script:uiLayoutBusy=$false
 $uiTools=New-Object Windows.Forms.FlowLayoutPanel;$uiTools.WrapContents=$true;$uiTools.BackColor=[Drawing.Color]::White;$uiTools.Padding=New-Object Windows.Forms.Padding(0);$dashboard.Controls.Add($uiTools)
 foreach($spec in @(@($attachExisting,186),@($dashNew,76),@($dashCancel,88),@($dashDown,120),@($neisDownload,120),@($nRosterPrompt,120),@($dashUp,116),@($dashSave,88),@($wOne,105),@($wAll,82))){$button=$spec[0];$button.Parent=$uiTools;$button.Width=$spec[1];$button.Height=30;$button.Margin=New-Object Windows.Forms.Padding(0,0,6,4)}
@@ -48,7 +48,8 @@ function Ui12HomeLayout{
  foreach($label in $nHome.Controls|Where-Object {$_ -is [Windows.Forms.Label] -and $_.Text -like 'Drive*'}){$label.SetBounds(24,($h-84),($w-48),36)}
 }
 function Ui12Dialog($dialog){
- if($dialog -isnot [Windows.Forms.Form] -or $dialog.Tag -is [string] -and $dialog.Tag -eq '__layout_done'){return}
+ if($dialog -isnot [Windows.Forms.Form]){return}
+ if(($dialog.Tag -is [string]) -and ($dialog.Tag -eq '__layout_done')){return}
  if($dialog -eq $f -or $dialog.AccessibleDescription -eq 'ui12-layout-done'){return}
  $dialog.AccessibleDescription='ui12-layout-done';$old=$dialog.ClientSize;$width=$old.Width;$height=$old.Height
  switch($dialog.Text){

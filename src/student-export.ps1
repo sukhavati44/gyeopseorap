@@ -1,4 +1,4 @@
-﻿# Read-only extraction. Never calls code issuance, recovery, workbook save, or Save-Meta.
+# Read-only extraction. Never calls code issuance, recovery, workbook save, or Save-Meta.
 function EMap($o){if($null -eq $o){return $null};if($o -is [Management.Automation.PSCustomObject]){$h=@{};foreach($p in $o.PSObject.Properties){$h[$p.Name]=EMap $p.Value};return $h};if($o -is [array]){return ,@($o|ForEach-Object {EMap $_})};return $o}
 function EHash($path){$s=[IO.File]::Open($path,'Open','Read','ReadWrite');$h=[Security.Cryptography.SHA256]::Create();try{return [BitConverter]::ToString($h.ComputeHash($s))}finally{$h.Dispose();$s.Dispose()}}
 function EPath($root,$rel){$p=[IO.Path]::GetFullPath((Join-Path $root $rel));if(!$p.StartsWith($root+'\',[StringComparison]::OrdinalIgnoreCase)){throw '프로젝트 밖 연결 자료는 추출하지 않았습니다.'};$walk=$p;while($walk.Length -gt $root.Length){if((Get-Item -LiteralPath $walk -Force).Attributes -band [IO.FileAttributes]::ReparsePoint){throw '연결 폴더는 허용하지 않습니다.'};$walk=Split-Path $walk};return $p}
@@ -42,9 +42,12 @@ function ExportStudents($root,$req){
  foreach($sid in $ids){$temp='';try{
   $person=$m.students[$sid];$code=if($registry -and $registry.codes[$sid]){$registry.prefix+'-'+$registry.codes[$sid].suffix}else{''}
   $identity=if($req.identity -eq 'code'){$code}elseif($req.identity -eq 'both'){[string]$person.name+'_'+$code}else{[string]$person.name}
+  $classes=@($m.memberships|Where-Object {$_.student -eq $sid -and $_.from -le $req.as_of -and (!$_.until -or $_.until -ge $req.as_of)}|ForEach-Object {[string]$_.class}|Sort-Object -Unique)
+  $classLabel=if($classes.Count){$classes -join ', '}else{'학급 미지정'}
   $info=ESheet '학생정보' @('구분','값');$info.rows.Add([object[]]@('식별정보',$identity));$info.rows.Add([object[]]@('조회 기준일',[string]$req.as_of));$info.rows.Add([object[]]@('범위','전체 작업표 · 조회 선택/깊이와 무관'))
+  $info.rows.Add([object[]]@('학급',$classLabel))
   if($req.identity -ne 'code'){$info.rows.Add([object[]]@('이름',[string]$person.name));$info.rows.Add([object[]]@('번호',[string]$person.number))};if($req.identity -ne 'name'){$info.rows.Add([object[]]@('코드',$code))}
-  $info.rows.Add([object[]]@('주의','원문 내용·메모에 포함된 실명은 자동 비식별화하지 않습니다. 긴 내용은 분할 번호 순서대로 이어 읽으세요.'))
+  $info.rows.Add([object[]]@('주의','원문 내용·메모에 포함된 실명은 자동 비식별화하지 않습니다. 긴 내용은 바로 다음 행에 이어집니다.'))
   $values=ESheet '전체항목' @('작업표 경로','작업표 ID','상위 작업표 ID','상위 연결 항목','항목 ID','항목 이름','값 종류','출처 파일','출처 셀','수식 여부','원본 수식','분할','분할 수','원본 내용')
   $memo=ESheet '메모·배점' @('종류','작업표 경로','작업표 ID','항목 ID','수정일','분할','분할 수','원본 내용')
   $links=ESheet '연결' @('종류','출발 작업표','출발 항목','도착 작업표','도착 항목','분할','분할 수','원본 내용')
@@ -74,9 +77,25 @@ function ExportStudents($root,$req){
   foreach($k in $extras.Keys){EFind $extras[$k] $sid $k $other}
   foreach($k in @('courses','labels','neisSources','detachedAreas')){if($m[$k]){EAdd $other @(('relations.json/'+$k),'공통 연결 정보') ($m[$k]|ConvertTo-Json -Depth 100 -Compress)}}
   $manifest.rows.Add([object[]]@('추출','전체항목',[string]$values.rows.Count));$manifest.rows.Add([object[]]@('추출','메모·배점',[string]$memo.rows.Count));$manifest.rows.Add([object[]]@('추출','기타기록',[string]$other.rows.Count));$manifest.rows.Add([object[]]@('보존','원본 파일','읽기 전용 · 변경하지 않음'));$manifest.rows.Add([object[]]@('범위','백업 폴더','중복 백업 파일 자체는 복제하지 않음 · 현행·보관 기록과 기존 이력은 포함'))
-  $safe=[regex]::Replace($identity,'[<>:"/\\|?*\x00-\x1f]','_').Trim().TrimEnd('.');if(!$safe){$safe='학생'};if($safe.Length -gt 100){$safe=$safe.Substring(0,100)}
+  $safe=[regex]::Replace(($classLabel+'_'+$identity),'[<>:"/\\|?*\x00-\x1f]','_').Trim().TrimEnd('.');if(!$safe){$safe='학생'};if($safe.Length -gt 100){$safe=$safe.Substring(0,100)}
   $file=Join-Path $batch ($safe+'_'+[guid]::NewGuid().ToString('N').Substring(0,8)+'.xlsx');$temp=$file+'.partial'
-  [StudentArchive]::Write($temp,[object[]]@($info,$values,$memo,$links,$other,$manifest));EVerify;[IO.File]::Move($temp,$file);$result.Add(@{target=$identity;file=$file;status='완료';items=$values.rows.Count;memos=$memo.rows.Count;records=$other.rows.Count})
+  $readable=ESheet '학생 기록' @('영역 · 작업표','평가항목','점수','내용 · 판단 근거','메모','배점')
+  $groups=@{};$order=[Collections.Generic.List[string]]::new()
+  foreach($row in $values.rows){
+   if([string]$row[4] -match '(^|[._])status$'){continue}
+   $key=[string]$row[1]+'|'+[string]$row[4]
+   $label=[string]$row[5];if($label -eq [string]$row[4]){$label='항목 '+[string]$books[[string]$row[1]].heads[[string]$row[4]]}
+   $numeric=([string]$row[6] -in @('Double','Decimal','Int32','Int64','Single'))
+   if(!$groups.ContainsKey($key)){$groups[$key]=@{path=[string]$row[0];label=$label;numeric=$numeric;values=[Collections.Generic.List[string]]::new();memos=[Collections.Generic.List[string]]::new();scores=[Collections.Generic.List[string]]::new()};$order.Add($key)}
+   $groups[$key].values.Add([string]$row[13])
+  }
+  foreach($row in $memo.rows){
+   $key=[string]$row[2]+'|'+[string]$row[3]
+   if(!$groups.ContainsKey($key)){$label=[string]$m.labels[$key];if(!$label){$label=if([string]$row[3] -eq '__total__'){'합계'}else{'이름 없는 항목'}};$groups[$key]=@{path=[string]$row[1];label=$label;numeric=$false;values=[Collections.Generic.List[string]]::new();memos=[Collections.Generic.List[string]]::new();scores=[Collections.Generic.List[string]]::new()};$order.Add($key)}
+   if([string]$row[0] -eq '열 배점'){$groups[$key].scores.Add([string]$row[7])}else{$groups[$key].memos.Add([string]$row[7])}
+  }
+  foreach($key in $order){$g=$groups[$key];$count=[math]::Max($g.values.Count,[math]::Max($g.memos.Count,$g.scores.Count));for($i=0;$i -lt $count;$i++){$value=if($i -lt $g.values.Count){$g.values[$i]}else{''};$label=$g.label+$(if($i -gt 0){' (계속)'}else{''});$readable.rows.Add([object[]]@($g.path,$label,$(if($g.numeric){$value}else{''}),$(if($g.numeric){''}else{$value}),$(if($i -lt $g.memos.Count){$g.memos[$i]}else{''}),$(if($i -lt $g.scores.Count){$g.scores[$i]}else{''})))}}
+  [StudentArchive]::Write($temp,[object[]]@($info,$readable));EVerify;[IO.File]::Move($temp,$file);$result.Add(@{target=$identity;file=$file;status='완료';items=$readable.rows.Count;memos=$memo.rows.Count})
  }catch{$result.Add(@{target=$identity;status='실패';error=$_.Exception.Message;partial=$temp})}}
  $manifestFile=Join-Path $batch '생성결과.json';$out=@{directory=$batch;results=$result.ToArray();success=@($result|Where-Object status -EQ '완료').Count;failed=@($result|Where-Object status -EQ '실패').Count;scope=$req.scope;identity=$req.identity;source_unchanged=$false}
  try{EVerify;$out.source_unchanged=$true}catch{$out.error=$_.Exception.Message;$out.failed=$ids.Count;$out.success=0}

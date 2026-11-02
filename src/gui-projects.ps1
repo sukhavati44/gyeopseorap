@@ -1,4 +1,4 @@
-﻿$script:nView='project';$script:nLastArea='';$script:nLastSpace='';$script:nTabLoading=$false
+$script:nView='project';$script:nLastArea='';$script:nLastSpace='';$script:nTabLoading=$false
 $f.Text=$productTitle;$f.MinimumSize=New-Object Drawing.Size(1300,940)
 $nBar=New-Object Windows.Forms.FlowLayoutPanel;$nBar.Dock='Bottom';$nBar.Height=52;$nBar.BackColor=$pale;$nBar.WrapContents=$false;$f.Controls.Add($nBar)
 $nTabs=@{};foreach($spec in @(@('project','프로젝트'),@('summary','종합표'),@('detail','영역 세부'),@('workspace','작업공간'),@('student','학생 개별조회'),@('import','반입 검토'),@('help','오류·복구 안내'))){$b=DButton $nBar $spec[1] 0 0 175 {DSafe {NSelect ([string]$this.Tag)}};$b.Tag=$spec[0];$b.Height=44;$b.Margin=New-Object Windows.Forms.Padding(3,4,3,4);$nTabs[$spec[0]]=$b}
@@ -39,7 +39,9 @@ function NOpen($path){
  }catch{$failure=$_;NCloseProject;if($previous.root -and $previous.root -ne $info.root -and (Test-Path -LiteralPath (Join-Path $previous.root 'relations.json'))){try{Open-Workspace $previous.root;$script:wTarget=$previous.target;$script:wStudent=$previous.student;DInitialize $previous.profile;DLoad $previous.mode $previous.area;NActivate $previous.mode}catch{NCloseProject;NActivate 'project'}}else{NActivate 'project'};throw $failure}
 }
 function NOpenPicker{
- DClean;$d=New-Object Windows.Forms.OpenFileDialog;$d.Title='프로젝트 폴더의 project.json 또는 relations.json 선택';$d.Filter='프로젝트|project.json;relations.json';$d.InitialDirectory=Join-Path $base 'projects';if($(Ui12Dialog $d;$d.ShowDialog($f)) -eq 'OK'){NOpen (Split-Path $d.FileName)}
+ DClean;$d=New-Object Windows.Forms.FolderBrowserDialog;$d.Description='프로젝트 이름의 폴더를 선택하세요. 내부 파일을 고를 필요가 없습니다.';$d.ShowNewFolderButton=$false
+ if($ws -and (Test-Path -LiteralPath $ws -PathType Container)){$d.SelectedPath=$ws}elseif(Test-Path -LiteralPath (Join-Path $base 'projects')){$d.SelectedPath=Join-Path $base 'projects'}
+ try{if($d.ShowDialog($f) -eq 'OK'){$path=$d.SelectedPath;if(!(Test-Path -LiteralPath (Join-Path $path 'relations.json') -PathType Leaf)){[void][Windows.Forms.MessageBox]::Show($f,'프로젝트 이름의 폴더를 선택해 주세요. 상위 보관 폴더를 선택했다면 그 안의 프로젝트 폴더를 선택하세요.','프로젝트 폴더 선택','OK','Information');return};NOpen $path}}finally{$d.Dispose()}
 }
 function NNewProject{
  DClean;$d=New-Object Windows.Forms.Form;$d.Text='새 프로젝트 만들기';$d.Size=New-Object Drawing.Size(900,760);$d.StartPosition='CenterParent';$d.Font=$f.Font
